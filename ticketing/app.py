@@ -11,7 +11,6 @@ library_spec.loader.exec_module(mylibrary)
 
 st.set_page_config(page_title="Tales of Lanfang Tickets", layout="wide")
 st.title("Tales of Lanfang Tickets")
-st.caption("Book your Visit!")
 info_tab, booking_tab = st.tabs(["Prices and visit information", "Book tickets"])
 
 with info_tab:
@@ -42,7 +41,7 @@ with info_tab:
                 "Peak": f"${mylibrary.admission_price(category, 'Peak', express):.2f}",
             })
     st.table(price_rows)
-    st.caption("Express costs twice standard admission. Prices shown are before family and discount-code savings.")
+    st.caption("Express costs twice standard admission. Prices shown are before family savings.")
 
     tour_column, savings_column = st.columns(2)
     with tour_column:
@@ -58,13 +57,18 @@ with info_tab:
 
     with savings_column:
         with st.container(border=True):
-            st.subheader("Family savings and codes")
+            st.subheader("Family savings")
             st.write(f"**Save {mylibrary.PRICES['family_discount']}% with family tickets**")
-            st.write("Your group needs at least 3 people, including at least 1 child.")
-            st.write(f"Up to {mylibrary.MAX_ADULTS_PER_CHILD} adults per child receive the family rate. Additional adults pay standard admission.")
-            st.table([{"Code": code, "Admission savings": f"{rate}%"} for code, rate in mylibrary.DISCOUNT_CODES.items()])
-            with st.expander("How discounts are applied"):
-                st.write("Off-peak savings apply first, followed by eligible family savings and then the discount code. Audio guides and tours are charged separately.")
+            st.markdown(
+                "- **Group size** · At least 3 people, including at least 1 child.\n"
+                f"- **Family rate** · Up to {mylibrary.MAX_ADULTS_PER_CHILD} adults per child. "
+                "Additional adults pay standard admission."
+            )
+            st.markdown(
+                "**How discounts are applied**\n\n"
+                "Off-peak savings apply first, followed by eligible family savings. "
+                "Audio guides and tours are charged separately."
+            )
 
 with booking_tab:
     # A wider input column keeps the live summary alongside the ticket choices.
@@ -109,7 +113,6 @@ with booking_tab:
 
             if tour != "None":
                 st.caption(f"{guide_count} tour guide(s) for {people} visitors · ${mylibrary.PRICES['tour'][tour]:.2f} per guide · maximum {mylibrary.MAX_PEOPLE_PER_GUIDE} visitors per guide.")
-            discount_code = st.text_input("Discount code", placeholder="Enter a code (optional)")
 
     with summary_column:
         with st.container(border=True):
@@ -137,7 +140,7 @@ with booking_tab:
                     # Calculate on every rerun using the selected ticket quantities.
                     result = mylibrary.calculate_booking(
                         adults=adults, children=children, rental=rental, ticket_type=ticket_type,
-                        family=family, tour=tour, discount_code=discount_code,
+                        family=family, tour=tour,
                         express_adults=express_adults, express_children=express_children,
                     )
                 except ValueError as error:
@@ -146,7 +149,7 @@ with booking_tab:
                 else:
                     st.metric("Total to pay", f"${result['Total to pay']:.2f}")
                     # Show the payable components once and dont show unused extras.
-                    for item in ["Basic ticket total", "Express upgrade", "Off-peak discount", "Family discount", "Discount code savings", "Audio guides", "Group tour"]:
+                    for item in ["Basic ticket total", "Express upgrade", "Off-peak discount", "Family discount", "Audio guides", "Group tour"]:
                         amount = result[item]
                         if amount != 0:
                             label_column, amount_column = st.columns([3, 1])

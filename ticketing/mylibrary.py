@@ -11,7 +11,6 @@ PRICES = {
     "period_discount": {"Peak": 0, "Off-Peak": 10},  # Percentage off admission.
     "family_discount": 15,  # Percentage off eligible family admission.
 }
-DISCOUNT_CODES = {"WELCOME10": 10, "LANFANG20": 20}  # Code and percentage discount.
 CHILD_MAX_AGE = 12  # Inclusive upper age for a child ticket.
 MAX_ADULTS_PER_CHILD = 4  # Family tickets allow at most 4 adults for each child.
 MAX_PEOPLE_PER_GUIDE = 15  # Each tour guide can accompany at most 15 visitors.
@@ -34,7 +33,7 @@ def _money(value):
 
 
 def admission_price(category, ticket_type="Peak", express=False):
-    #  Return the displayed per-person rate before family or code discounts.
+    # Return the displayed per-person rate before family savings.
     price = Decimal(str(PRICES[category]))  # Start from the peak admission price.
     multiplier = PRICES["express_multiplier"] if express else 1
     discount = Decimal(str(PRICES["period_discount"][ticket_type])) / 100
@@ -74,7 +73,7 @@ def tour_guides_needed(people):
 
 
 def calculate_booking(adults, children, rental=0, ticket_type="Peak",
-                      express=False, family=False, tour="None", discount_code="",
+                      express=False, family=False, tour="None",
                       express_adults=0, express_children=0):
     #Function to Calculate the total cost of a booking, including admission, discounts, rentals, and tour guides.
     adult_total, child_total = calculate_total(adults, children)
@@ -95,9 +94,6 @@ def calculate_booking(adults, children, rental=0, ticket_type="Peak",
     _quantity(express_children)
     if express_adults > adults or express_children > children:
         raise ValueError("Express quantities cannot exceed the corresponding ticket quantities.")
-    code = discount_code.strip().upper()  # Accept lowercase codes and surrounding spaces.
-    if code and code not in DISCOUNT_CODES:
-        raise ValueError("Invalid discount code. Try WELCOME10 or LANFANG20.")
     basic_total = _money(adult_total + child_total)
     
     # Standard admission is already included, so add only the express upgrade.
@@ -123,8 +119,6 @@ def calculate_booking(adults, children, rental=0, ticket_type="Peak",
         family_admission -= family_period
         family_discount = _money(family_admission * Decimal(str(PRICES["family_discount"])) / 100)
     admission -= family_discount  # Family savings apply only to covered visitors.
-    code_discount = _money(admission * Decimal(str(DISCOUNT_CODES.get(code, 0))) / 100)
-    admission -= code_discount  # Apply the promotional code last.
     guide_count = tour_guides_needed(adults + children) if tour != "None" else 0
     tour_cost = _money(PRICES["tour"][tour] * guide_count)  # Charge for every needed guide.
     return {
@@ -134,7 +128,6 @@ def calculate_booking(adults, children, rental=0, ticket_type="Peak",
         "Express upgrade": express_cost,
         "Off-peak discount": -period_discount,
         "Family discount": -family_discount,
-        "Discount code savings": -code_discount,
         "Admission total": admission,
         "Audio guides": _money(guides_cost),
         "Group tour": tour_cost,
