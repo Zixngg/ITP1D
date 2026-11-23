@@ -1,6 +1,6 @@
 ﻿"""Pop-up visit calendar and Singapore public-holiday classification."""
-import calendar  # Lay out dates in Monday-first calendar weeks.
-from datetime import date, datetime, timedelta, timezone  # Usea Singapore date 
+import calendar  
+from datetime import date, datetime, timedelta, timezone   
 import streamlit as st
 
 # Include substitute Mondays when a public holiday falls on Sunday.

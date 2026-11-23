@@ -1,9 +1,9 @@
-﻿import streamlit as st  # Create the page and refresh total calculation when inputs change.
-from importlib.util import module_from_spec, spec_from_file_location  # Load the local pricing file.
-from pathlib import Path  # Resolve the library relative to this app.
-from visit_calendar import visit_calendar, visit_period  # Select a date and derive its admission rate.
+﻿import streamlit as st  
+from importlib.util import module_from_spec, spec_from_file_location  
+from pathlib import Path  
+from visit_calendar import visit_calendar, visit_period  
 
-# Reload the library on each rerun to avoid conflicting imports.
+# Reload the library on each rerun to avoid conflicting imports
 library_path = Path(__file__).resolve().with_name("mylibrary.py")
 library_spec = spec_from_file_location("ticketing_mylibrary", library_path)
 mylibrary = module_from_spec(library_spec)
@@ -30,7 +30,7 @@ with info_tab:
     st.caption("Adults are aged 13 and above. Children are aged 12 and below. Public Holidays always use peak prices.")
 
     st.subheader("Ticket Pricing")
-    # Reference the pricing library so displayed rates match the booking calculation.
+    # Reference the pricing library so displayed rates matches the booking calculation
     price_rows = []
 
     for category, label in [("adult", "Adult"), ("child", "Child")]:
@@ -67,13 +67,13 @@ with info_tab:
                 st.write("Off-peak savings apply first, followed by eligible family savings and then the discount code. Audio guides and tours are charged separately.")
 
 with booking_tab:
-    # A wider input column keeps the live summary alongside the ticket choices.
+    # A wider input column keeps the live summary alongside the ticket choices
     choices_column, summary_column = st.columns([3, 2], gap="large")
     with choices_column:
         with st.container(border=True):
             st.subheader("Your visit")
-            visit_date = visit_calendar()  # The calendar supplies the visit date automatically.
-            ticket_type = visit_period(visit_date)  # Use the same rule as the coloured day circles.
+            visit_date = visit_calendar()  # The calendar supplies the visit date automatically
+            ticket_type = visit_period(visit_date)  # Use the same rule as the coloured day circles
             st.write(f"**{ticket_type} admission**")
             st.caption(mylibrary.VISIT_DAYS[ticket_type])
             adult_column, child_column = st.columns(2)
@@ -92,7 +92,7 @@ with booking_tab:
         with st.container(border=True):
             st.subheader("Express admission")
             st.caption("Choose how many tickets to upgrade. These are included in your visitor counts above.")
-            # Reduce saved express quantities when the visitor counts decrease.
+            # Reduce saved express quantities when the visitor counts decrease
 
             for key, maximum in [("express_adults", adults), ("express_children", children)]:
                 st.session_state[key] = min(st.session_state.get(key, 0), maximum)
@@ -116,7 +116,7 @@ with booking_tab:
             st.subheader("Your booking")
             st.caption("Updates automatically as you change your selections.")
             st.write(f"**{ticket_type} admission**")
-            st.write(visit_date.strftime("%A, %d %B %Y"))  # Confirm the selected booking date.
+            st.write(visit_date.strftime("%A, %d %B %Y"))  # Confirm the selected booking date
             st.write(f"{adults} adult(s) · {children} child(ren)")
             st.write(f"Express upgrades · {express_adults} adult(s), {express_children} child(ren)")
 
@@ -134,7 +134,7 @@ with booking_tab:
 
             else:
                 try:
-                    # Calculate on every rerun using the selected ticket quantities.
+                    # Calculate on every rerun using the selected ticket quantities
                     result = mylibrary.calculate_booking(
                         adults=adults, children=children, rental=rental, ticket_type=ticket_type,
                         family=family, tour=tour, discount_code=discount_code,
@@ -145,7 +145,7 @@ with booking_tab:
                     
                 else:
                     st.metric("Total to pay", f"${result['Total to pay']:.2f}")
-                    # Show the payable components once and dont show unused extras.
+                    # Show the payable components once and dont show unused extras
                     for item in ["Basic ticket total", "Express upgrade", "Off-peak discount", "Family discount", "Discount code savings", "Audio guides", "Group tour"]:
                         amount = result[item]
                         if amount != 0:

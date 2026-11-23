@@ -1,5 +1,5 @@
 ﻿"""Pricing catalogue and calculations for Tales of Lanfang bookings."""
-from decimal import Decimal, ROUND_HALF_UP  # Use exact decimal arithmetic for money.
+from decimal import Decimal, ROUND_HALF_UP  # Use exact decimal for money.
 
 # Change prices here so the information page and booking use the same rates.
 PRICES = {
