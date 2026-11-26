@@ -31,18 +31,28 @@ def visit_period(visit_date):
 
 def _select_day(selected_date):
     """Update the selected date before Streamlit rerenders the booking summary."""
-    st.session_state.visit_date = selected_date
+    if selected_date >= singapore_today():
+        st.session_state.visit_date = selected_date
+
+
+def singapore_today():
+    return datetime.now(timezone(timedelta(hours=8))).date()
+
+
+def default_visit_date():
+    today = singapore_today()
+    # Limit available years to those with verified holiday data.
+    return today if today.year in PUBLIC_HOLIDAYS else date(min(PUBLIC_HOLIDAYS), 1, 1)
 
 
 def visit_calendar():
     """Return the selected date from a coloured, keyboard-accessible pop-up calendar."""
-    today = datetime.now(timezone(timedelta(hours=8))).date()
-    # Limit available years to those with verified holiday data.
-    initial_date = today if today.year in PUBLIC_HOLIDAYS else date(min(PUBLIC_HOLIDAYS), 1, 1)
-
+    today = singapore_today()
     if "visit_date" not in st.session_state:
-        st.session_state.visit_date = initial_date
+        st.session_state.visit_date = default_visit_date()
     selected = st.session_state.visit_date
+    st.session_state.setdefault("visit_calendar_year", selected.year)
+    st.session_state.setdefault("visit_calendar_month", selected.month)
 
     styles = Path(__file__).with_name("visit_calendar.css").read_text(encoding="utf-8")
     st.markdown(f"<style>{styles}</style>", unsafe_allow_html=True)
@@ -52,8 +62,8 @@ def visit_calendar():
         st.markdown("**Choose your visit date**")
         year_column, month_column = st.columns([1, 2])
         year = year_column.selectbox("Year", sorted(PUBLIC_HOLIDAYS),
-                                     index=sorted(PUBLIC_HOLIDAYS).index(selected.year), key="visit_calendar_year")
-        month = month_column.selectbox("Month", list(range(1, 13)), index=selected.month - 1,
+                                     key="visit_calendar_year")
+        month = month_column.selectbox("Month", list(range(1, 13)),
                                       format_func=lambda value: calendar.month_name[value], key="visit_calendar_month")
         st.markdown('''<div class="visit-legend">
         <span><i class="visit-dot off-peak"></i>Off-peak</span>
@@ -77,8 +87,10 @@ def visit_calendar():
                 column.button(
                     str(day_number), key=f"visit_day_{colour_key}_{day.isoformat()}{selection_key}",
                     help=f"{day.strftime('%A, %d %B %Y')} · {period}{holiday_label}",
+                    disabled=day < today,
                     on_click=_select_day, args=(day,),
                 )
+        st.caption("You can book for today or a future date.")
         st.caption("Off-peak · Monday–Thursday. Peak · Friday–Sunday and Singapore Public Holidays.")
         st.caption("Holiday calendar available for 2026–2027.")
     return selected
