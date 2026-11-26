@@ -1,7 +1,21 @@
 """Streamlit layout for the ticket information and booking tabs."""
+from uuid import uuid4
+
 import streamlit as st
 
-from visit_calendar import visit_calendar, visit_period
+from visit_calendar import default_visit_date, singapore_today, visit_calendar, visit_period
+
+
+BOOKING_DEFAULTS = {
+    "adults": 0,
+    "children": 0,
+    "family": False,
+    "express_adults": 0,
+    "express_children": 0,
+    "rental": 0,
+    "tour": "None",
+}
+BOOKING_KEYS = (*BOOKING_DEFAULTS, "visit_date", "visit_calendar_year", "visit_calendar_month")
 
 
 def render_ticketing_page(mylibrary):
@@ -11,7 +25,10 @@ def render_ticketing_page(mylibrary):
     with info_tab:
         render_visit_information(mylibrary)
     with booking_tab:
-        render_booking(mylibrary)
+        if "checkout_booking" in st.session_state:
+            render_checkout()
+        else:
+            render_booking(mylibrary)
 
 
 def render_visit_information(mylibrary):
@@ -72,20 +89,112 @@ def render_visit_information(mylibrary):
             )
 
 
+def reset_booking():
+    visit_date = default_visit_date()
+    # Write widget values so Streamlit sends the reset values to the browser.
+    st.session_state.update(
+        BOOKING_DEFAULTS,
+        visit_date=visit_date,
+        visit_calendar_year=visit_date.year,
+        visit_calendar_month=visit_date.month,
+    )
+    for key in ("checkout_booking", "booking_reference"):
+        st.session_state.pop(key, None)
+
+
+def start_checkout(breakdown, ticket_type, guide_count):
+    if st.session_state.visit_date < singapore_today():
+        return
+    st.session_state.checkout_booking = {
+        "selections": {key: st.session_state[key] for key in BOOKING_KEYS},
+        "breakdown": breakdown,
+        "ticket_type": ticket_type,
+        "guide_count": guide_count,
+    }
+
+
+def edit_booking():
+    booking = st.session_state.pop("checkout_booking")
+    st.session_state.update(booking["selections"])
+
+
+def confirm_booking():
+    visit_date = st.session_state.checkout_booking["selections"]["visit_date"]
+    if visit_date >= singapore_today():
+        st.session_state.booking_reference = uuid4().hex[:12].upper()
+
+
+def render_checkout():
+    booking = st.session_state.checkout_booking
+    selections = booking["selections"]
+    breakdown = booking["breakdown"]
+    reference = st.session_state.get("booking_reference")
+    date_has_passed = selections["visit_date"] < singapore_today()
+
+    st.subheader("Booking confirmation" if reference else "Checkout")
+    if reference:
+        st.success(f"Booking confirmed. Booking reference: {reference}")
+
+    with st.container(border=True):
+        st.write(f"**{booking['ticket_type']} admission**")
+        st.write(selections["visit_date"].strftime("%A, %d %B %Y"))
+        express_adults = selections["express_adults"]
+        express_children = selections["express_children"]
+        line_items = [
+            ("Adult tickets", str(selections["adults"]), "Adult tickets"),
+            ("Child tickets", str(selections["children"]), "Child tickets"),
+            ("Express upgrades", f"{express_adults} adult, {express_children} child", "Express upgrade"),
+            ("Off-peak discount", "", "Off-peak discount"),
+            ("Family discount", "", "Family discount"),
+            ("Audio guides", str(selections["rental"]), "Audio guides"),
+            (f"{selections['tour']} guided tour", f"{booking['guide_count']} guide(s)", "Group tour"),
+        ]
+        rows = []
+        for label, quantity, price_key in line_items:
+            amount = breakdown[price_key]
+            if amount:
+                sign = "-" if amount < 0 else ""
+                rows.append({
+                    "Item": label,
+                    "Quantity": quantity,
+                    "Amount (SGD)": f"{sign}${abs(amount):.2f}",
+                })
+        st.table(rows)
+        total_label = "Total payment" if reference else "Total to pay"
+        st.metric(total_label, f"S${breakdown['Total to pay']:.2f}")
+
+    if reference:
+        st.button("Book more tickets", on_click=reset_booking)
+    else:
+        back_column, pay_column = st.columns(2)
+        back_column.button("Back to booking", on_click=edit_booking)
+        pay_column.button(
+            "Make payment", type="primary", on_click=confirm_booking,
+            disabled=date_has_passed,
+        )
+        if date_has_passed:
+            st.warning("This visit date has passed. Go back and choose today or a future date.")
+
+
 def render_booking(mylibrary):
     # A wider input column keeps the live summary alongside the ticket choices.
     choices_column, summary_column = st.columns([3, 2], gap="large")
     with choices_column:
         with st.container(border=True):
-            st.subheader("Your visit")
+            with st.container(horizontal=True, horizontal_alignment="distribute"):
+                st.subheader("Your visit")
+                st.button("Reset", on_click=reset_booking)
             visit_date = visit_calendar()  # The calendar supplies the visit date automatically.
+            date_has_passed = visit_date < singapore_today()
+            if date_has_passed:
+                st.warning("Choose today or a future date to continue.")
             ticket_type = visit_period(visit_date)  # Use the same rule as the coloured day circles.
             st.write(f"**{ticket_type} admission**")
             st.caption(mylibrary.VISIT_DAYS[ticket_type])
             adult_column, child_column = st.columns(2)
             adults = adult_column.number_input("Adults · ages 13+", min_value=0, step=1, key="adults")
             children = child_column.number_input("Children · ages 0–12", min_value=0, step=1, key="children")
-            family = st.checkbox("Apply family savings")
+            family = st.checkbox("Apply family savings", key="family")
             family_adults, extra_adults = mylibrary.family_group(adults, children)
 
             if mylibrary.family_eligible(adults, children):
@@ -109,7 +218,7 @@ def render_booking(mylibrary):
         with st.container(border=True):
             st.subheader("Guides and extras")
             rental = st.number_input("Audio guides", min_value=0, step=1, key="rental", help=f"${mylibrary.PRICES['audio_guide']:.2f} per audio guide.")
-            tour = st.selectbox("Guided tour", options=list(mylibrary.PRICES["tour"]))
+            tour = st.selectbox("Guided tour", options=list(mylibrary.PRICES["tour"]), key="tour")
             people = adults + children
             guide_count = mylibrary.tour_guides_needed(people) if tour != "None" else 0
 
@@ -135,7 +244,7 @@ def render_booking(mylibrary):
 
             if people == 0:
                 st.metric("Total to pay", "$0.00")
-                st.info("Add your visitors to see a price breakdown.")
+                st.info("Add your tickets to see a price breakdown.")
 
             else:
                 try:
@@ -159,3 +268,8 @@ def render_booking(mylibrary):
                             amount_column.write(f"-${abs(amount):.2f}" if amount < 0 else f"${amount:.2f}")
                     with st.expander("Full price breakdown"):
                         st.table([{"Item": item, "Amount": f"${amount:.2f}"} for item, amount in result.items()])
+                    st.button(
+                        "Continue to checkout", type="primary", on_click=start_checkout,
+                        args=(result, ticket_type, guide_count),
+                        disabled=date_has_passed,
+                    )
