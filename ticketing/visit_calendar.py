@@ -1,6 +1,8 @@
-﻿"""Pop-up visit calendar and Singapore public-holiday classification."""
+"""Pop-up visit calendar and Singapore public-holiday classification."""
 import calendar  # Lay out dates in Monday-first calendar weeks.
 from datetime import date, datetime, timedelta, timezone  # Usea Singapore date 
+from pathlib import Path
+
 import streamlit as st
 
 # Include substitute Mondays when a public holiday falls on Sunday.
@@ -42,29 +44,8 @@ def visit_calendar():
         st.session_state.visit_date = initial_date
     selected = st.session_state.visit_date
 
-    # Scope colour styles
-    st.markdown('''<style>
-    [class*="st-key-visit_day_"] button {
-        border-radius: 50%; width: 2.3rem; min-width: 2.3rem;
-        height: 2.3rem; min-height: 2.3rem; padding: 0; margin: auto;
-    }
-    [class*="st-key-visit_day_peak_"] button {
-        background: #ffedd5; color: #7c2d12; border: 1px solid #fb923c;
-    }
-    [class*="st-key-visit_day_offpeak_"] button {
-        background: #ccfbf1; color: #134e4a; border: 1px solid #2dd4bf;
-    }
-    [class*="st-key-visit_day_"] button:hover { filter: brightness(.94); }
-    [class*="st-key-visit_day_"] button:focus-visible {
-        outline: 3px solid #2563eb; outline-offset: 2px;
-    }
-    [class*="st-key-visit_day_"][class*="_selected"] button {
-        outline: 3px solid #2563eb; outline-offset: 2px;
-    }
-    .visit-legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 14px; margin: 12px 0; }
-    .visit-legend span { display: inline-flex; align-items: center; gap: 6px; }
-    .visit-dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
-    </style>''', unsafe_allow_html=True)
+    styles = Path(__file__).with_name("visit_calendar.css").read_text(encoding="utf-8")
+    st.markdown(f"<style>{styles}</style>", unsafe_allow_html=True)
 
     st.write("Visit date")
     with st.popover(selected.strftime("%A, %d %B %Y"), use_container_width=True):
@@ -75,9 +56,9 @@ def visit_calendar():
         month = month_column.selectbox("Month", list(range(1, 13)), index=selected.month - 1,
                                       format_func=lambda value: calendar.month_name[value], key="visit_calendar_month")
         st.markdown('''<div class="visit-legend">
-        <span><i class="visit-dot" style="background:#ccfbf1;border:1px solid #2dd4bf"></i>Off-peak</span>
-        <span><i class="visit-dot" style="background:#ffedd5;border:1px solid #fb923c"></i>Peak</span>
-        <span><i class="visit-dot" style="border:3px solid #2563eb"></i>Selected</span>
+        <span><i class="visit-dot off-peak"></i>Off-peak</span>
+        <span><i class="visit-dot peak"></i>Peak</span>
+        <span><i class="visit-dot selected"></i>Selected</span>
         </div>''', unsafe_allow_html=True)
 
         for column, weekday in zip(st.columns(7), calendar.day_abbr):

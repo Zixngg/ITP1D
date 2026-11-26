@@ -1,0 +1,23 @@
+[class*="st-key-visit_day_"] button {
+    border-radius: 50%; width: 2.3rem; min-width: 2.3rem;
+    height: 2.3rem; min-height: 2.3rem; padding: 0; margin: auto;
+}
+[class*="st-key-visit_day_peak_"] button {
+    background: #ffedd5; color: #7c2d12; border: 1px solid #fb923c;
+}
+[class*="st-key-visit_day_offpeak_"] button {
+    background: #ccfbf1; color: #134e4a; border: 1px solid #2dd4bf;
+}
+[class*="st-key-visit_day_"] button:hover { filter: brightness(.94); }
+[class*="st-key-visit_day_"] button:focus-visible {
+    outline: 3px solid #2563eb; outline-offset: 2px;
+}
+[class*="st-key-visit_day_"][class*="_selected"] button {
+    outline: 3px solid #2563eb; outline-offset: 2px;
+}
+.visit-legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 14px; margin: 12px 0; }
+.visit-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.visit-dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
+.visit-dot.off-peak { background: #ccfbf1; border: 1px solid #2dd4bf; }
+.visit-dot.peak { background: #ffedd5; border: 1px solid #fb923c; }
+.visit-dot.selected { border: 3px solid #2563eb; }
